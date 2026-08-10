@@ -1,8 +1,0 @@
-{
-  "name": "SinGlutenpzo",
-  "description": "Catálogo digital y sistema de gestión de ventas, productos sin gluten, postres saludables, inventario y finanzas para SinGlutenpzo (Oriven Distribuidora de Alimentos).",
-  "requestFramePermissions": [],
-  "majorCapabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
-  ]
-}
