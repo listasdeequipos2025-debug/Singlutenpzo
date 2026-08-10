@@ -1,0 +1,234 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global Safety Net (default deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. ID Safety and Length Validator
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // 3. Entity Schema & Validation Helpers
+
+    function isValidProduct(data) {
+      return data.keys().hasAll(["name", "category", "salePrice", "stock"]) &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 256 &&
+        data.category is string && data.category in ["equipos", "accesorios"] &&
+        data.salePrice is number && data.salePrice >= 0 &&
+        data.stock is number &&
+        (!data.keys().hasAny(["costPrice"]) || data.costPrice is number) &&
+        (!data.keys().hasAny(["wholesalePrice"]) || data.wholesalePrice is number) &&
+        (!data.keys().hasAny(["creditPrice"]) || data.creditPrice is number) &&
+        (!data.keys().hasAny(["referenceProfit"]) || data.referenceProfit is number) &&
+        (!data.keys().hasAny(["image"]) || (data.image is string && data.image.size() <= 2097152)) && // support larger images up to 2MB base64
+        (!data.keys().hasAny(["createdAt"]) || (data.createdAt is string && data.createdAt.size() <= 64)) &&
+        (!data.keys().hasAny(["isBulkUploaded"]) || data.isBulkUploaded is bool);
+    }
+
+    function isValidSale(data) {
+      return data.keys().hasAll(["productName", "productId", "category", "quantity", "salePrice", "profit", "date", "month"]) &&
+        data.productName is string && data.productName.size() > 0 && data.productName.size() <= 256 &&
+        data.productId is string && data.productId.size() > 0 && data.productId.size() <= 128 &&
+        data.category is string && data.category in ["equipos", "accesorios"] &&
+        data.quantity is number &&
+        data.salePrice is number && data.salePrice >= 0 &&
+        data.profit is number &&
+        data.date is string && data.date.size() <= 64 &&
+        data.month is string && data.month.size() <= 64 &&
+        (!data.keys().hasAny(["costPrice"]) || data.costPrice is number) &&
+        (!data.keys().hasAny(["customerName"]) || (data.customerName is string && data.customerName.size() <= 256)) &&
+        (!data.keys().hasAny(["customerPhone"]) || (data.customerPhone is string && data.customerPhone.size() <= 64)) &&
+        (!data.keys().hasAny(["customerCedula"]) || (data.customerCedula is string && data.customerCedula.size() <= 64)) &&
+        (!data.keys().hasAny(["customerAddress"]) || (data.customerAddress is string && data.customerAddress.size() <= 512)) &&
+        (!data.keys().hasAny(["customerEmail"]) || (data.customerEmail is string && data.customerEmail.size() <= 256)) &&
+        (!data.keys().hasAny(["paymentMethod"]) || (data.paymentMethod is string && data.paymentMethod.size() <= 64)) &&
+        (!data.keys().hasAny(["paymentPeriodicity"]) || (data.paymentPeriodicity is string && data.paymentPeriodicity.size() <= 64)) &&
+        (!data.keys().hasAny(["specificPaymentDate"]) || (data.specificPaymentDate is string && data.specificPaymentDate.size() <= 64)) &&
+        (!data.keys().hasAny(["createdAt"]) || (data.createdAt is string && data.createdAt.size() <= 64)) &&
+        (!data.keys().hasAny(["paidAmount"]) || data.paidAmount is number) &&
+        (!data.keys().hasAny(["remainingAmount"]) || data.remainingAmount is number) &&
+        (!data.keys().hasAny(["status"]) || (data.status is string && data.status in ["pagado", "pendiente"])) &&
+        (!data.keys().hasAny(["abonos"]) || (data.abonos is list && data.abonos.size() <= 100)) &&
+        (!data.keys().hasAny(["invoiceNumber"]) || (data.invoiceNumber is string && data.invoiceNumber.size() <= 64)) &&
+        (!data.keys().hasAny(["controlNumber"]) || (data.controlNumber is string && data.controlNumber.size() <= 64)) &&
+        (!data.keys().hasAny(["initialPaymentAmount"]) || data.initialPaymentAmount is number) &&
+        (!data.keys().hasAny(["initialPaymentPercentage"]) || data.initialPaymentPercentage is number);
+    }
+
+    function isValidPurchase(data) {
+      return data.keys().hasAll(["invoiceNumber", "date", "month", "totalAmount", "type", "status"]) &&
+        data.invoiceNumber is string && data.invoiceNumber.size() > 0 && data.invoiceNumber.size() <= 128 &&
+        data.date is string && data.date.size() <= 64 &&
+        data.month is string && data.month.size() <= 64 &&
+        data.totalAmount is number && data.totalAmount >= 0 &&
+        data.type is string && data.type in ["contado", "credito"] &&
+        data.status is string && data.status in ["pagado", "pendiente"] &&
+        (!data.keys().hasAny(["provider"]) || (data.provider is string && data.provider.size() <= 256)) &&
+        (!data.keys().hasAny(["paymentDate"]) || (data.paymentDate is string && data.paymentDate.size() <= 64)) &&
+        (!data.keys().hasAny(["createdAt"]) || (data.createdAt is string && data.createdAt.size() <= 64)) &&
+        (!data.keys().hasAny(["invoiceImage"]) || (data.invoiceImage is string && data.invoiceImage.size() <= 1048576)) &&
+        (!data.keys().hasAny(["currency"]) || (data.currency is string && data.currency.size() <= 3)) &&
+        (!data.keys().hasAny(["bcvRate"]) || data.bcvRate is number) &&
+        (!data.keys().hasAny(["originalAmountVES"]) || data.originalAmountVES is number) &&
+        (!data.keys().hasAny(["items"]) || (data.items is list && data.items.size() <= 100));
+    }
+
+    function isValidExpense(data) {
+      return data.keys().hasAll(["description", "amount", "date", "month", "category"]) &&
+        data.description is string && data.description.size() > 0 && data.description.size() <= 512 &&
+        data.amount is number && data.amount >= 0 &&
+        data.date is string && data.date.size() <= 64 &&
+        data.month is string && data.month.size() <= 64 &&
+        data.category is string && data.category in ["personal", "servicios", "alquiler", "otros"] &&
+        (!data.keys().hasAny(["createdAt"]) || (data.createdAt is string && data.createdAt.size() <= 64));
+    }
+
+    function isValidReturn(data) {
+      return data.keys().hasAll(["productId", "productName", "category", "quantity", "date", "month", "refundAmount", "discountCostFromProfit"]) &&
+        data.productId is string && data.productId.size() > 0 && data.productId.size() <= 128 &&
+        data.productName is string && data.productName.size() > 0 && data.productName.size() <= 256 &&
+        data.category is string && data.category in ["equipos", "accesorios"] &&
+        data.quantity is number && data.quantity > 0 &&
+        data.date is string && data.date.size() <= 64 &&
+        data.month is string && data.month.size() <= 64 &&
+        data.refundAmount is number && data.refundAmount >= 0 &&
+        data.discountCostFromProfit is bool &&
+        (!data.keys().hasAny(["costPrice"]) || data.costPrice is number) &&
+        (!data.keys().hasAny(["createdAt"]) || (data.createdAt is string && data.createdAt.size() <= 64));
+    }
+
+    function isValidSettings(data) {
+      return data.keys().hasAll(["pin"]) &&
+        data.pin is string && data.pin.size() == 4 &&
+        (!data.keys().hasAny(["whatsapp"]) || (data.whatsapp is string && data.whatsapp.size() <= 32));
+    }
+
+    function isValidProvider(data) {
+      return data.keys().hasAll(["name", "createdAt"]) &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 256 &&
+        (!data.keys().hasAny(["phone"]) || (data.phone is string && data.phone.size() <= 64)) &&
+        (!data.keys().hasAny(["email"]) || (data.email is string && data.email.size() <= 256)) &&
+        (!data.keys().hasAny(["address"]) || (data.address is string && data.address.size() <= 512)) &&
+        (!data.keys().hasAny(["rif"]) || (data.rif is string && data.rif.size() <= 64)) &&
+        (!data.keys().hasAny(["notes"]) || (data.notes is string && data.notes.size() <= 2048)) &&
+        data.createdAt is string && data.createdAt.size() <= 64;
+    }
+
+    function isValidRawMaterial(data) {
+      return data.keys().hasAll(["name", "unit", "stock", "costPerUnit", "createdAt"]) &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 256 &&
+        data.unit is string && data.unit.size() <= 64 &&
+        data.stock is number &&
+        data.costPerUnit is number &&
+        data.createdAt is string &&
+        (!data.keys().hasAny(["minStock"]) || data.minStock is number) &&
+        (!data.keys().hasAny(["totalCost"]) || data.totalCost is number) &&
+        (!data.keys().hasAny(["supplier"]) || (data.supplier is string && data.supplier.size() <= 256)) &&
+        (!data.keys().hasAny(["notes"]) || (data.notes is string && data.notes.size() <= 2048)) &&
+        (!data.keys().hasAny(["updatedAt"]) || (data.updatedAt is string && data.updatedAt.size() <= 64));
+    }
+
+    function isValidRecipe(data) {
+      return data.keys().hasAll(["name", "yieldQuantity", "yieldUnit", "ingredients", "totalIngredientsCost", "totalRecipeCost", "costPerUnit", "suggestedSalePricePerUnit", "createdAt"]) &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 256 &&
+        data.yieldQuantity is number &&
+        data.yieldUnit is string &&
+        data.ingredients is list &&
+        data.totalIngredientsCost is number &&
+        data.totalRecipeCost is number &&
+        data.costPerUnit is number &&
+        data.suggestedSalePricePerUnit is number &&
+        data.createdAt is string &&
+        (!data.keys().hasAny(["preparationTimeMinutes"]) || data.preparationTimeMinutes is number) &&
+        (!data.keys().hasAny(["description"]) || (data.description is string && data.description.size() <= 2048)) &&
+        (!data.keys().hasAny(["category"]) || (data.category is string && data.category.size() <= 128)) &&
+        (!data.keys().hasAny(["packagingCost"]) || data.packagingCost is number) &&
+        (!data.keys().hasAny(["laborCost"]) || data.laborCost is number) &&
+        (!data.keys().hasAny(["overheadPercentage"]) || data.overheadPercentage is number) &&
+        (!data.keys().hasAny(["overheadCost"]) || data.overheadCost is number) &&
+        (!data.keys().hasAny(["desiredMarginPercentage"]) || data.desiredMarginPercentage is number) &&
+        (!data.keys().hasAny(["suggestedBatchSalePrice"]) || data.suggestedBatchSalePrice is number) &&
+        (!data.keys().hasAny(["aiAnalysis"]) || data.aiAnalysis is map) &&
+        (!data.keys().hasAny(["updatedAt"]) || (data.updatedAt is string && data.updatedAt.size() <= 64));
+    }
+
+    // 4. Match Blocks for Collections
+
+    match /inventory/{productId} {
+      allow get: if isValidId(productId);
+      allow list: if true;
+      allow create: if isValidId(productId) && isValidProduct(request.resource.data) && request.resource.data.keys().size() <= 15;
+      allow update: if isValidId(productId) && isValidProduct(request.resource.data) && request.resource.data.keys().size() <= 15;
+      allow delete: if isValidId(productId);
+    }
+
+    match /sales/{saleId} {
+      allow get: if isValidId(saleId);
+      allow list: if true;
+      allow create: if isValidId(saleId) && isValidSale(request.resource.data) && request.resource.data.keys().size() <= 35;
+      allow update: if isValidId(saleId) && isValidSale(request.resource.data) && request.resource.data.keys().size() <= 35;
+      allow delete: if isValidId(saleId);
+    }
+
+    match /purchases/{purchaseId} {
+      allow get: if isValidId(purchaseId);
+      allow list: if true;
+      allow create: if isValidId(purchaseId) && isValidPurchase(request.resource.data) && request.resource.data.keys().size() <= 15;
+      allow update: if isValidId(purchaseId) && isValidPurchase(request.resource.data) && request.resource.data.keys().size() <= 15;
+      allow delete: if isValidId(purchaseId);
+    }
+
+    match /expenses/{expenseId} {
+      allow get: if isValidId(expenseId);
+      allow list: if true;
+      allow create: if isValidId(expenseId) && isValidExpense(request.resource.data) && request.resource.data.keys().size() <= 6;
+      allow update: if isValidId(expenseId) && isValidExpense(request.resource.data) && request.resource.data.keys().size() <= 6;
+      allow delete: if isValidId(expenseId);
+    }
+
+    match /returns/{returnId} {
+      allow get: if isValidId(returnId);
+      allow list: if true;
+      allow create: if isValidId(returnId) && isValidReturn(request.resource.data) && request.resource.data.keys().size() <= 10;
+      allow update: if isValidId(returnId) && isValidReturn(request.resource.data) && request.resource.data.keys().size() <= 10;
+      allow delete: if isValidId(returnId);
+    }
+
+    match /settings/{settingId} {
+      allow get: if isValidId(settingId);
+      allow list: if true;
+      allow create: if isValidId(settingId) && isValidSettings(request.resource.data) && request.resource.data.keys().size() <= 3;
+      allow update: if isValidId(settingId) && isValidSettings(request.resource.data) && request.resource.data.keys().size() <= 3;
+      allow delete: if isValidId(settingId);
+    }
+
+    match /providers/{providerId} {
+      allow get: if isValidId(providerId);
+      allow list: if true;
+      allow create: if isValidId(providerId) && isValidProvider(request.resource.data) && request.resource.data.keys().size() <= 8;
+      allow update: if isValidId(providerId) && isValidProvider(request.resource.data) && request.resource.data.keys().size() <= 8;
+      allow delete: if isValidId(providerId);
+    }
+
+    match /raw_materials/{materialId} {
+      allow get: if isValidId(materialId);
+      allow list: if true;
+      allow create: if isValidId(materialId) && isValidRawMaterial(request.resource.data);
+      allow update: if isValidId(materialId) && isValidRawMaterial(request.resource.data);
+      allow delete: if isValidId(materialId);
+    }
+
+    match /recipes/{recipeId} {
+      allow get: if isValidId(recipeId);
+      allow list: if true;
+      allow create: if isValidId(recipeId) && isValidRecipe(request.resource.data);
+      allow update: if isValidId(recipeId) && isValidRecipe(request.resource.data);
+      allow delete: if isValidId(recipeId);
+    }
+
+  }
+}
