@@ -1,0 +1,170 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "Represents an inventory product (cellphone or accessory)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string", "enum": ["equipos", "accesorios"] },
+        "costPrice": { "type": "number", "description": "Hidden cost price. If undefined, referenceProfit is used." },
+        "salePrice": { "type": "number", "description": "Public sale price." },
+        "wholesalePrice": { "type": "number", "description": "Optional wholesale price (precio al mayor)." },
+        "creditPrice": { "type": "number", "description": "Optional credit price (precio a crédito)." },
+        "referenceProfit": { "type": "number", "description": "Fallback profit if costPrice is empty." },
+        "stock": { "type": "number" },
+        "image": { "type": "string", "description": "Optional image URL or base64" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "category", "salePrice", "stock"]
+    },
+    "Sale": {
+      "title": "Sale",
+      "description": "Represents a customer purchase or invoice",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "productName": { "type": "string" },
+        "productId": { "type": "string" },
+        "category": { "type": "string", "enum": ["equipos", "accesorios"] },
+        "quantity": { "type": "number" },
+        "salePrice": { "type": "number" },
+        "costPrice": { "type": "number" },
+        "profit": { "type": "number" },
+        "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "customerCedula": { "type": "string" },
+        "customerAddress": { "type": "string" },
+        "customerEmail": { "type": "string" },
+        "paymentPeriodicity": { "type": "string" },
+        "specificPaymentDate": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "month": { "type": "string", "description": "YYYY-MM format starting from 2026-07" },
+        "paymentMethod": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "paidAmount": { "type": "number", "description": "Monto pagado" },
+        "remainingAmount": { "type": "number", "description": "Monto restante por pagar" },
+        "status": { "type": "string", "enum": ["pagado", "pendiente"], "description": "Estado del pago" },
+        "abonos": { "type": "array" },
+        "invoiceNumber": { "type": "string", "description": "Número de recibo/factura consecutivo" },
+        "controlNumber": { "type": "string", "description": "Número de control" },
+        "initialPaymentAmount": { "type": "number", "description": "Abono inicial de la venta" },
+        "initialPaymentPercentage": { "type": "number", "description": "Porcentaje de la inicial respecto al total" }
+      },
+      "required": ["productName", "productId", "category", "quantity", "salePrice", "profit", "date", "month"]
+    },
+    "Purchase": {
+      "title": "Purchase",
+      "description": "Represents a store merchandise purchase from a provider",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "invoiceNumber": { "type": "string" },
+        "provider": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "month": { "type": "string" },
+        "totalAmount": { "type": "number" },
+        "type": { "type": "string", "enum": ["contado", "credito"] },
+        "status": { "type": "string", "enum": ["pagado", "pendiente"] },
+        "paymentDate": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["invoiceNumber", "date", "month", "totalAmount", "type", "status"]
+    },
+    "Expense": {
+      "title": "Expense",
+      "description": "Represents other store operating expenses like salary, rent, utilities",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "description": { "type": "string" },
+        "amount": { "type": "number" },
+        "date": { "type": "string", "format": "date" },
+        "month": { "type": "string" },
+        "category": { "type": "string", "enum": ["personal", "servicios", "alquiler", "otros"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["description", "amount", "date", "month", "category"]
+    },
+    "Return": {
+      "title": "Return",
+      "description": "Represents a returned product",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "productId": { "type": "string" },
+        "productName": { "type": "string" },
+        "category": { "type": "string", "enum": ["equipos", "accesorios"] },
+        "quantity": { "type": "number" },
+        "date": { "type": "string", "format": "date" },
+        "month": { "type": "string" },
+        "refundAmount": { "type": "number" },
+        "discountCostFromProfit": { "type": "boolean" },
+        "costPrice": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["productId", "productName", "category", "quantity", "date", "month", "refundAmount", "discountCostFromProfit"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "Application general settings (like admin pin and recovery configuration)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "pin": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "recoveryEmail": { "type": "string" },
+        "securityQuestion": { "type": "string" },
+        "securityAnswer": { "type": "string" }
+      },
+      "required": ["pin"]
+    },
+    "Provider": {
+      "title": "Provider",
+      "description": "Represents a merchandise provider",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "address": { "type": "string" },
+        "rif": { "type": "string" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/inventory/{productId}": {
+      "schema": "Product",
+      "description": "Store inventory catalog"
+    },
+    "/sales/{saleId}": {
+      "schema": "Sale",
+      "description": "Historical log of sales"
+    },
+    "/purchases/{purchaseId}": {
+      "schema": "Purchase",
+      "description": "Provider merchandise purchases"
+    },
+    "/expenses/{expenseId}": {
+      "schema": "Expense",
+      "description": "Other operating expenses"
+    },
+    "/returns/{returnId}": {
+      "schema": "Return",
+      "description": "Returned merchandise log"
+    },
+    "/settings/{settingId}": {
+      "schema": "Settings",
+      "description": "Store settings"
+    },
+    "/providers/{providerId}": {
+      "schema": "Provider",
+      "description": "Registered merchandise providers"
+    }
+  }
+}
