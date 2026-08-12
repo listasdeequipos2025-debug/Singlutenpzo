@@ -123,7 +123,7 @@ export default function App() {
         });
       });
       // Sort by creation date or name
-      setProducts(items.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+      setProducts(items.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || "")));
     }, (error) => {
       handleFirestoreError(error, OperationType.GET, "inventory");
     });
@@ -214,7 +214,7 @@ export default function App() {
           originalAmountVES: data.originalAmountVES || undefined
         });
       });
-      setPurchases(items.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+      setPurchases(items.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || "")));
     }, (error) => {
       handleFirestoreError(error, OperationType.GET, "purchases");
     });
@@ -234,7 +234,7 @@ export default function App() {
           createdAt: data.createdAt || ""
         });
       });
-      setExpenses(items.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+      setExpenses(items.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || "")));
     }, (error) => {
       handleFirestoreError(error, OperationType.GET, "expenses");
     });
@@ -258,7 +258,7 @@ export default function App() {
           createdAt: data.createdAt || ""
         });
       });
-      setReturns(items.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+      setReturns(items.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || "")));
     }, (error) => {
       handleFirestoreError(error, OperationType.GET, "returns");
     });
@@ -279,7 +279,7 @@ export default function App() {
           createdAt: data.createdAt || ""
         });
       });
-      setProviders(items.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+      setProviders(items.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || "")));
     }, (error) => {
       handleFirestoreError(error, OperationType.GET, "providers");
     });
@@ -830,6 +830,7 @@ export default function App() {
       }
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, "purchases");
+      throw error;
     }
   };
 
@@ -865,6 +866,7 @@ export default function App() {
       }
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, "purchases");
+      throw error;
     }
   };
 
