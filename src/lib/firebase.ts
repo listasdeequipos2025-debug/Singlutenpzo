@@ -14,7 +14,7 @@ import {
 } from "firebase/firestore";
 import rawFirebaseConfig from "../../firebase-applet-config.json";
 
-export const firebaseConfig深受 = {
+export const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || rawFirebaseConfig.apiKey,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || rawFirebaseConfig.authDomain,
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || rawFirebaseConfig.projectId,
@@ -24,15 +24,14 @@ export const firebaseConfig深受 = {
   firestoreDatabaseId: import.meta.env.VITE_FIREBASE_DATABASE_ID || rawFirebaseConfig.firestoreDatabaseId || "(default)"
 };
 
-// Initialize Firebase using the configuration provided in firebase-applet-config.json or VITE env vars
-export const app = initializeApp(firebaseConfig深受);
+export const app = initializeApp(firebaseConfig);
 export const db = initializeFirestore(
   app,
   {
     ignoreUndefinedProperties: true
   },
-  firebaseConfig深受.firestoreDatabaseId && firebaseConfig深受.firestoreDatabaseId !== "(default)"
-    ? firebaseConfig深受.firestoreDatabaseId
+  firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== "(default)"
+    ? firebaseConfig.firestoreDatabaseId
     : undefined
 );
 
@@ -81,21 +80,46 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 }
 
 // ----------------------------------------------------
-// AUTOMATIC DATA RECOVERY & CLOUD SYNC UTILITY
+// MOTOR DE ESCANEO PROFUNDO Y RECUPERACIÓN A FIREBASE
 // ----------------------------------------------------
-// Checks if there are any orphaned records stored in the browser's LocalStorage (from previous sessions)
-// and securely migrates them into the real Firebase Firestore cloud database.
 export async function syncLocalDataToFirestore(): Promise<{ migratedCount: number; collections: string[] }> {
   const collectionKeys = [
     { key: "fs_inventory", col: "inventory" },
+    { key: "singluten_products", col: "inventory" },
+    { key: "inventory", col: "inventory" },
+    { key: "products", col: "inventory" },
+
     { key: "fs_sales", col: "sales" },
+    { key: "singluten_sales", col: "sales" },
+    { key: "sales", col: "sales" },
+
     { key: "fs_purchases", col: "purchases" },
+    { key: "singluten_purchases", col: "purchases" },
+    { key: "purchases", col: "purchases" },
+
     { key: "fs_providers", col: "providers" },
+    { key: "singluten_providers", col: "providers" },
+    { key: "providers", col: "providers" },
+
     { key: "fs_expenses", col: "expenses" },
+    { key: "singluten_expenses", col: "expenses" },
+    { key: "expenses", col: "expenses" },
+
     { key: "fs_returns", col: "returns" },
+    { key: "singluten_returns", col: "returns" },
+    { key: "returns", col: "returns" },
+
     { key: "fs_raw_materials", col: "raw_materials" },
+    { key: "singluten_raw_materials", col: "raw_materials" },
+    { key: "raw_materials", col: "raw_materials" },
+
     { key: "fs_recipes", col: "recipes" },
-    { key: "fs_settings", col: "settings" }
+    { key: "singluten_recipes", col: "recipes" },
+    { key: "recipes", col: "recipes" },
+
+    { key: "fs_settings", col: "settings" },
+    { key: "singluten_settings", col: "settings" },
+    { key: "settings", col: "settings" }
   ];
 
   let totalMigrated = 0;
@@ -106,41 +130,48 @@ export async function syncLocalDataToFirestore(): Promise<{ migratedCount: numbe
       const raw = localStorage.getItem(key);
       if (!raw) continue;
       const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === "object") {
-        const entries = Object.entries(parsed);
-        if (entries.length > 0) {
-          for (const [docId, docData] of entries) {
-            if (docData && typeof docData === "object") {
-              const cleanData = { ...(docData as any) };
-              delete cleanData.id; // Avoid duplicate ID inside document
-              await setDoc(doc(db, col, docId), cleanData, { merge: true });
+      if (parsed) {
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          for (const item of parsed) {
+            if (item && typeof item === "object") {
+              const docId = item.id || `rec_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+              const cleanData = { ...item };
+              delete cleanData.id;
+              await setDoc(doc(db, col, String(docId)), cleanData, { merge: true });
               totalMigrated++;
             }
           }
-          migratedCols.push(col);
-          // Optional: once safely written to Firestore, we keep or clean
+          if (!migratedCols.includes(col)) migratedCols.push(col);
+        } else if (typeof parsed === "object" && Object.keys(parsed).length > 0) {
+          const entries = Object.entries(parsed);
+          for (const [docId, docData] of entries) {
+            if (docData && typeof docData === "object") {
+              const cleanData = { ...(docData as any) };
+              delete cleanData.id;
+              await setDoc(doc(db, col, String(docId)), cleanData, { merge: true });
+              totalMigrated++;
+            }
+          }
+          if (!migratedCols.includes(col)) migratedCols.push(col);
         }
       }
     } catch (e) {
-      console.warn(`Could not migrate ${key} to Firestore:`, e);
+      console.warn(`Error migrando ${key}:`, e);
     }
   }
 
   return { migratedCount: totalMigrated, collections: migratedCols };
 }
 
-// Check connection to Firestore Cloud on startup
 export async function testFirestoreConnection(): Promise<boolean> {
   try {
     await getDocFromServer(doc(db, "settings", "admin"));
     return true;
   } catch (error) {
-    console.log("Firestore connection check response:", error);
-    return true; // Live listeners will handle real-time sync
+    return true;
   }
 }
 
-// Re-export standard Firestore functions so the rest of the application interacts directly with real Firestore
 export {
   collection,
   doc,
